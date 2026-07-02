@@ -47,7 +47,7 @@ const Profile = () => {
     <div className="max-w-2xl mx-auto">
       <div className="glass rounded-2xl p-8 border border-white/5">
         <div className="flex items-center gap-5 mb-6">
-          {/* Unique icon – user’s initial with gradient */}
+          {/* Unique icon – user's initial with gradient */}
           <div className="w-20 h-20 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-3xl font-bold text-white shadow-xl shadow-blue-500/20">
             {user?.name?.charAt(0).toUpperCase()}
           </div>
@@ -57,6 +57,12 @@ const Profile = () => {
             <span className="inline-block mt-1 text-xs px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
               {user?.plan || 'FREE'}
             </span>
+            {/* Optional: Show admin badge */}
+            {user?.role === 'admin' && (
+              <span className="inline-block mt-1 ml-2 text-xs px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                Admin
+              </span>
+            )}
           </div>
         </div>
         <div className="border-t border-white/10 pt-6">
@@ -83,20 +89,24 @@ const Profile = () => {
             </div>
           </div>
         </div>
-        <div className="mt-6 border-t border-white/10 pt-6">
-          <h4 className="text-sm font-medium text-gray-400 mb-3">Change Plan (Admin)</h4>
-          <div className="flex flex-wrap gap-3">
-            {['FREE', 'PREMIUM', 'ADMIN'].map((plan) => (
-              <button
-                key={plan}
-                onClick={() => changePlan(plan)}
-                className="px-4 py-2 rounded-lg text-sm bg-white/5 hover:bg-white/10 border border-white/10 transition text-gray-300"
-              >
-                {plan}
-              </button>
-            ))}
+        
+        {/* Admin-Only Plan Change Section */}
+        {user?.role === 'admin' && (
+          <div className="mt-6 border-t border-white/10 pt-6">
+            <h4 className="text-sm font-medium text-gray-400 mb-3">Change Plan (Admin)</h4>
+            <div className="flex flex-wrap gap-3">
+              {['FREE', 'PREMIUM', 'ADMIN'].map((plan) => (
+                <button
+                  key={plan}
+                  onClick={() => changePlan(plan)}
+                  className="px-4 py-2 rounded-lg text-sm bg-white/5 hover:bg-white/10 border border-white/10 transition text-gray-300"
+                >
+                  {plan}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Toast Notification */}

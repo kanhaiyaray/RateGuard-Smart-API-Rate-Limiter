@@ -3,12 +3,19 @@ const User = require('../models/User');
 
 const auth = async (req, res, next) => {
   try {
-    const token = req.header('Authorization')?.replace('Bearer ', '');
-    if (!token) throw new Error();
+    // Read token from cookie instead of Authorization header
+    const token = req.cookies.token; // <-- This is key!
+    
+    if (!token) {
+      throw new Error('No token provided');
+    }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.id).select('-password');
-    if (!user) throw new Error();
+    
+    if (!user) {
+      throw new Error('User not found');
+    }
 
     req.user = user;
     next();
