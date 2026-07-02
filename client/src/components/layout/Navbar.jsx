@@ -25,7 +25,7 @@ const Navbar = () => {
 
       {/* Center: Navigation Links (only when logged in) */}
       {user && (
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-10"> {/* increased gap from 6 to 10 */}
           <Link
             to="/"
             className="text-sm text-gray-300 hover:text-white transition"

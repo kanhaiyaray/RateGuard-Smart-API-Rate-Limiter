@@ -23,7 +23,14 @@ services:
     restart: unless-stopped
     ports:
       - "5001:5000"
+    volumes:
+      - ./server/src:/app/src
+      - ./server/package.json:/app/package.json
+      - ./server/.env:/app/.env
+    command: npm run dev
     environment:
+      - NODE_ENV=development
+      - NODEMON_POLLING_INTERVAL=1000
       - PORT=5000
       - MONGODB_URI=mongodb://mongodb:27017/rate-limiter
       - REDIS_URL=redis://redis:6379
@@ -40,6 +47,15 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
+    volumes:
+      - ./client/src:/app/src
+      - ./client/public:/app/public
+      - ./client/package.json:/app/package.json
+      - ./client/.env:/app/.env
+    environment:
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+      - REACT_APP_API_URL=http://localhost:5001/api
     depends_on:
       - server
 
