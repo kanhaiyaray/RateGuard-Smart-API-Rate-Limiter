@@ -1,0 +1,47 @@
+services:
+  mongodb:
+    image: mongo:6
+    container_name: rate-limiter-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  redis:
+    image: redis:7-alpine
+    container_name: rate-limiter-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    container_name: rate-limiter-server
+    restart: unless-stopped
+    ports:
+      - "5001:5000"
+    environment:
+      - PORT=5000
+      - MONGODB_URI=mongodb://mongodb:27017/rate-limiter
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=your_super_secret_key_change_me
+    depends_on:
+      - mongodb
+      - redis
+
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    container_name: rate-limiter-client
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - server
+
+volumes:
+  mongo-data:

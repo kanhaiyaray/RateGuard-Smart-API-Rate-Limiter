@@ -1,0 +1,15 @@
+services:
+  server:
+    volumes:
+      - ./server/src:/app/src
+      - ./server/package.json:/app/package.json
+      - ./server/.env:/app/.env   # if you want to change env without rebuild
+    command: npm run dev
+
+  client:
+    volumes:
+      - ./client/src:/app/src
+      - ./client/public:/app/public
+      - ./client/package.json:/app/package.json
+      - ./client/.env:/app/.env
+    # command is already "npm start" – no change needed
