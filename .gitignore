@@ -1,76 +1,41 @@
-# ==========================
-# Node / NPM
-# ==========================
+# ============ Node ============
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
 
-# ==========================
-# Environment files
-# ==========================
+# ============ Environment ============
 .env
 .env.local
-.env.development
 .env.production
-.env.test
+.env.development
 
-# ==========================
-# Build outputs
-# ==========================
+# ============ Docker ============
+docker-compose.override.yml
+*.pid
+
+# ============ Build ============
 dist/
 build/
-client/build/
-server/dist/
 .next/
 out/
 
-# ==========================
-# Dependency directories
-# ==========================
-client/node_modules/
-server/node_modules/
-
-# ==========================
-# Logs & temporary files
-# ==========================
-*.log
-*.tmp
-*.temp
-logs/
-server/logs/
-client/logs/
-
-# ==========================
-# OS / Editor files
-# ==========================
-.DS_Store
-Thumbs.db
-desktop.ini
+# ============ IDE ============
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
+.DS_Store
 
-# ==========================
-# Testing / coverage
-# ==========================
+# ============ Logs ============
+logs/
+*.log
+
+# ============ Coverage ============
 coverage/
 .nyc_output/
-jest-coverage/
 
-# ==========================
-# Docker / dev overrides (optional)
-# ==========================
-docker-compose.override.yml   # if you want to keep it out of version control
-
-# ==========================
-# Misc
-# ==========================
-*.pid
-*.seed
-*.pid.lock
+# ============ Temporary ============
+tmp/
+temp/
+*.tmp

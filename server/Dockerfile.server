@@ -47,5 +47,6 @@ EXPOSE 5000
 CMD ["node", "src/server.js"]
 
 # ============ Multi-stage build ============
+# This allows building different stages:
 # docker build --target development -t rateguard-server:dev -f Dockerfile.server .
 # docker build --target production -t rateguard-server:prod -f Dockerfile.server .

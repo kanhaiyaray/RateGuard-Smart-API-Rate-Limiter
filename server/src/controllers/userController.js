@@ -1,3 +1,4 @@
+// server/src/controllers/userController.js
 exports.getProfile = (req, res) => {
   try {
     if (!req.user) {
@@ -56,6 +57,10 @@ exports.updateProfile = async (req, res) => {
 
 exports.deleteAccount = async (req, res) => {
   try {
+    // Also delete user's analytics data
+    const Analytics = require('../models/Analytics');
+    await Analytics.deleteMany({ userId: req.user._id });
+    
     await req.user.deleteOne();
     res.json({
       success: true,

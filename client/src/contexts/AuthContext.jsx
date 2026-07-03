@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import Spinner from '../components/common/Spinner';
 
 const AuthContext = createContext();
 
@@ -16,7 +17,8 @@ export const AuthProvider = ({ children }) => {
         console.log('🔄 Loading user session...');
         const res = await api.get('/profile');
         console.log('✅ User loaded successfully:', res.data);
-        setUser(res.data);
+        // ✅ FIXED: Access data property from standardized response
+        setUser(res.data.data);
       } catch (err) {
         console.log('❌ No valid session:', err.response?.status || err.message);
         console.log('🔍 Error details:', {
@@ -38,7 +40,6 @@ export const AuthProvider = ({ children }) => {
     const handleUnauthorized = () => {
       console.log('🔒 Session expired - logging out');
       setUser(null);
-      // Redirect to login page when token expires
       navigate('/login');
     };
 
@@ -54,7 +55,8 @@ export const AuthProvider = ({ children }) => {
     try {
       console.log('📝 Registering user:', email);
       const res = await api.post('/auth/register', { name, email, password });
-      const { user } = res.data;
+      // ✅ FIXED: Access data property from standardized response
+      const user = res.data.data;
       console.log('✅ Registration successful:', user);
       setUser(user);
       return user;
@@ -69,7 +71,8 @@ export const AuthProvider = ({ children }) => {
     try {
       console.log('🔑 Logging in user:', email);
       const res = await api.post('/auth/login', { email, password });
-      const { user } = res.data;
+      // ✅ FIXED: Access data property from standardized response
+      const user = res.data.data;
       console.log('✅ Login successful:', user);
       setUser(user);
       return user;
@@ -98,6 +101,17 @@ export const AuthProvider = ({ children }) => {
     console.log('🔄 Updating user:', updatedUser);
     setUser(updatedUser);
   };
+
+  // Show loading spinner during initial auth check
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0b1120]">
+        <Spinner size="lg" color="blue" label="Loading your session...">
+          <p className="text-gray-400 mt-4">Please wait</p>
+        </Spinner>
+      </div>
+    );
+  }
 
   return (
     <AuthContext.Provider value={{ 

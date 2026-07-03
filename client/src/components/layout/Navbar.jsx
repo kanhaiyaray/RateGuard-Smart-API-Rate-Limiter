@@ -25,7 +25,7 @@ const Navbar = () => {
 
       {/* Center: Navigation Links (only when logged in) */}
       {user && (
-        <div className="flex items-center gap-10"> {/* increased gap from 6 to 10 */}
+        <div className="flex items-center gap-10">
           <Link
             to="/"
             className="text-sm text-gray-300 hover:text-white transition"
@@ -38,6 +38,19 @@ const Navbar = () => {
           >
             <i className="fas fa-chart-pie mr-1"></i> Dashboard
           </Link>
+          
+          {/* ✅ NEW: Admin Link - Only visible to admin users */}
+          {user.role === 'admin' && (
+            <Link
+              to="/admin"
+              className="text-sm text-purple-400 hover:text-purple-300 transition flex items-center gap-1"
+            >
+              <i className="fas fa-user-shield"></i>
+              <span>Admin</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse"></span>
+            </Link>
+          )}
+          
           <Link
             to="/profile"
             className="text-sm text-gray-300 hover:text-white transition"
@@ -58,9 +71,16 @@ const Navbar = () => {
             <span className="text-xs px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
               {user.plan || 'FREE'}
             </span>
+            {user.role === 'admin' && (
+              <span className="text-xs px-3 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                <i className="fas fa-crown mr-1"></i>
+                Admin
+              </span>
+            )}
             <button
               onClick={handleLogout}
               className="text-sm text-gray-400 hover:text-red-400 transition"
+              title="Logout"
             >
               <i className="fas fa-right-from-bracket"></i>
             </button>

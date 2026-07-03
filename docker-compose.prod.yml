@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   # ============ MongoDB ============
   mongodb:
@@ -8,18 +10,19 @@ services:
       - "27017:27017"
     volumes:
       - mongo-data:/data/db
-    # ✅ Added healthcheck for better dependency management
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-secure_password_change_me}
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    # ✅ Added logging configuration
+      interval: 30s
+      timeout: 10s
+      retries: 3
     logging:
       driver: "json-file"
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: "50m"
+        max-file: "5"
     networks:
       - rate-limiter-network
 
@@ -30,21 +33,19 @@ services:
     restart: unless-stopped
     ports:
       - "6379:6379"
-    # ✅ Added persistence with AOF
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
     volumes:
       - redis-data:/data
-    # ✅ Added healthcheck
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      interval: 30s
+      timeout: 10s
+      retries: 3
     logging:
       driver: "json-file"
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: "50m"
+        max-file: "5"
     networks:
       - rate-limiter-network
 
@@ -57,34 +58,23 @@ services:
     restart: unless-stopped
     ports:
       - "5001:5000"
-    volumes:
-      # ✅ Development hot-reload
-      - ./server/src:/app/src
-      - ./server/package.json:/app/package.json
-      # ✅ Optional: keep node_modules for performance
-      - /app/node_modules
-      # ✅ Environment variables
-      - ./server/.env:/app/.env
-    command: npm run dev
     environment:
-      - NODE_ENV=development
-      - NODEMON_POLLING_INTERVAL=1000
+      - NODE_ENV=production
       - PORT=5000
-      - MONGODB_URI=mongodb://mongodb:27017/rate-limiter
-      - REDIS_URL=redis://redis:6379
-      - JWT_SECRET=${JWT_SECRET:-your_super_secret_key_change_me}
-      - FRONTEND_URL=http://localhost:3000
+      - MONGODB_URI=mongodb://${MONGO_USERNAME:-admin}:${MONGO_PASSWORD:-secure_password_change_me}@mongodb:27017/rate-limiter?authSource=admin
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-}@redis:6379
+      - JWT_SECRET=${JWT_SECRET:-change_this_in_production}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
     depends_on:
       mongodb:
         condition: service_healthy
       redis:
         condition: service_healthy
-    # ✅ Added logging
     logging:
       driver: "json-file"
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: "50m"
+        max-file: "5"
     networks:
       - rate-limiter-network
 
@@ -96,27 +86,16 @@ services:
     container_name: rate-limiter-client
     restart: unless-stopped
     ports:
-      - "3000:3000"
-    volumes:
-      # ✅ Development hot-reload
-      - ./client/src:/app/src
-      - ./client/public:/app/public
-      - ./client/package.json:/app/package.json
-      # ✅ Optional: keep node_modules for performance
-      - /app/node_modules
-      # ✅ Environment variables
-      - ./client/.env:/app/.env
+      - "3000:80"  # Nginx serves on port 80 internally
     environment:
-      - CHOKIDAR_USEPOLLING=true
-      - WATCHPACK_POLLING=true
-      - REACT_APP_API_URL=http://localhost:5001/api
+      - REACT_APP_API_URL=${REACT_APP_API_URL:-http://localhost:5001/api}
     depends_on:
       - server
     logging:
       driver: "json-file"
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: "50m"
+        max-file: "5"
     networks:
       - rate-limiter-network
 

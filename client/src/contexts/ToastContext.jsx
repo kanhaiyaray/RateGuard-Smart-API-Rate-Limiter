@@ -29,9 +29,9 @@ export const ToastProvider = ({ children }) => {
   // ============ LISTEN FOR RATE LIMIT EVENTS ============
   useEffect(() => {
     const handleRateLimited = (event) => {
-      const { message, retryAfter } = event.detail;
+      const { message, retryAfter } = event.detail || {};
       showToast(
-        `${message}. Please wait ${retryAfter} seconds.`,
+        message || `Rate limit exceeded. Please wait ${retryAfter || 60} seconds.`,
         'error',
         5000
       );
@@ -44,11 +44,25 @@ export const ToastProvider = ({ children }) => {
     };
   }, []);
 
-  // ============ LISTEN FOR OTHER EVENTS (Optional) ============
+  // ============ LISTEN FOR UNAUTHORIZED EVENTS ============
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      showToast('Your session has expired. Please log in again.', 'error', 5000);
+    };
+
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    
+    return () => {
+      window.removeEventListener('auth:unauthorized', handleUnauthorized);
+    };
+  }, []);
+
+  // ============ LISTEN FOR SERVER ERROR EVENTS ============
   useEffect(() => {
     const handleServerError = (event) => {
+      const detail = event.detail || {};
       showToast(
-        'Server error occurred. Please try again.',
+        detail.message || 'Server error occurred. Please try again.',
         'error',
         5000
       );
@@ -60,6 +74,52 @@ export const ToastProvider = ({ children }) => {
       window.removeEventListener('server:error', handleServerError);
     };
   }, []);
+
+  // ============ LISTEN FOR NETWORK ERROR EVENTS ============
+  useEffect(() => {
+    const handleNetworkError = () => {
+      showToast('Network error. Please check your connection.', 'error', 5000);
+    };
+
+    window.addEventListener('network:error', handleNetworkError);
+    
+    return () => {
+      window.removeEventListener('network:error', handleNetworkError);
+    };
+  }, []);
+
+  // ============ LISTEN FOR FORBIDDEN EVENTS ============
+  useEffect(() => {
+    const handleForbidden = () => {
+      showToast('You do not have permission to perform this action.', 'error', 4000);
+    };
+
+    window.addEventListener('auth:forbidden', handleForbidden);
+    
+    return () => {
+      window.removeEventListener('auth:forbidden', handleForbidden);
+    };
+  }, []);
+
+  // ============ LISTEN FOR SUCCESS EVENTS (Optional) ============
+  useEffect(() => {
+    const handleSuccess = (event) => {
+      const { message } = event.detail || {};
+      if (message) {
+        showToast(message, 'success', 3000);
+      }
+    };
+
+    window.addEventListener('app:success', handleSuccess);
+    
+    return () => {
+      window.removeEventListener('app:success', handleSuccess);
+    };
+  }, []);
+
+  // ============ COMBINED CLEANUP ============
+  // Note: The individual useEffect cleanups above handle each event listener
+  // This is just for demonstration of combined approach if needed
 
   return (
     <ToastContext.Provider value={{ toast, showToast, hideToast }}>
