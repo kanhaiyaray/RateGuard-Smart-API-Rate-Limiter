@@ -31,43 +31,6 @@ const sendTokenResponse = (user, res) => {
   });
 };
 
-// ============ REGISTER ============
-exports.register = async (req, res) => {
-  try {
-    const { name, email, password } = req.body;
-
-    // Check if user already exists
-    const existing = await User.findOne({ email });
-    if (existing) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email already registered'
-      });
-    }
-
-    // Hash password
-    const hashed = await bcrypt.hash(password, 10);
-
-    // Create user
-    const user = new User({
-      name,
-      email,
-      password: hashed,
-      // role defaults to 'user' from schema
-      // plan defaults to 'FREE' from schema
-    });
-    await user.save();
-
-    // Send token via cookie and return user data
-    sendTokenResponse(user, res);
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: err.message
-    });
-  }
-};
-
 // ============ LOGIN ============
 exports.login = async (req, res) => {
   try {
@@ -79,6 +42,14 @@ exports.login = async (req, res) => {
       return res.status(401).json({
         success: false,
         message: 'Invalid credentials'
+      });
+    }
+
+    // Verify admin-only access
+    if (user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied: admin only'
       });
     }
 

@@ -39,7 +39,9 @@
 
 ## Overview
 
-RateGuard is a production-ready API rate limiter that demonstrates the full stack of concerns behind request throttling — from atomic Redis counters to per-user plan management to live analytics charts. It ships as a Dockerized monorepo: one command starts MongoDB, Redis, the Express API, and the React frontend.
+RateGuard is a production-ready admin-only API rate limiter that demonstrates the full stack of concerns behind request throttling — from atomic Redis counters to live analytics charts and centralized admin plan management. It ships as a Dockerized monorepo: one command starts MongoDB, Redis, the Express API, and the React frontend.
+
+> Note: This repository is configured for administrator access only. Public user registration is disabled. The first admin user is bootstrapped from environment variables.
 
 **Three plan tiers, enforced at the middleware layer:**
 
@@ -57,7 +59,7 @@ Rate counters live in Redis — atomic increments with 1-minute TTL. Every reque
 
 | Category | Capability |
 |---|---|
-| **Auth** | JWT-based signup & login with bcrypt password hashing |
+| **Auth** | Admin-only JWT login with bcrypt password hashing |
 | **Rate Limiting** | Redis atomic counters, role-based limits, automatic TTL |
 | **Analytics** | Every request logged to MongoDB (endpoint, user, status, timestamp) |
 | **Dashboard** | Real-time stats cards, requests/hour chart, blocked/hour chart, top endpoints, active users |
@@ -130,6 +132,8 @@ cd ../client && npm install
 
 **Server** (`server/.env`):
 ```env
+ADMIN_EMAIL=admin@rateguard.local
+ADMIN_PASSWORD=Admin@1234
 PORT=5000
 MONGODB_URI=mongodb://localhost:27017/rate-limiter
 REDIS_URL=redis://localhost:6379
@@ -141,7 +145,8 @@ JWT_SECRET=your_secure_secret_key_here
 REACT_APP_API_URL=http://localhost:5000/api
 ```
 
-> **Note:** When running via Docker, the client points to port `5001` internally. For manual local runs, use port `5000` as shown above.
+> **Note:** This application is admin-only. Public registration is disabled.
+> When running via Docker, the client points to port `5001` internally. For manual local runs, use port `5000` as shown above.
 
 ### Step 3: Run the Services
 
@@ -164,14 +169,13 @@ Open **http://localhost:3000** in your browser.
 All endpoints are prefixed with `/api`.  
 **Base URL:** `http://localhost:5000/api`
 
-### 🔑 Authentication (Public)
+### 🔑 Authentication (Admin Only)
 
 | Method | Endpoint | Body | Description |
 |---|---|---|---|
-| `POST` | `/auth/register` | `{ name, email, password }` | Register a new user (defaults to `FREE` plan) |
-| `POST` | `/auth/login` | `{ email, password }` | Login and receive a JWT |
+| `POST` | `/auth/login` | `{ email, password }` | Admin login only — only users with the `admin` role may authenticate |
 
-### 🛡️ Protected (Requires `Authorization: Bearer <token>`)
+### 🛡️ Protected (Requires valid auth cookie)
 
 | Method | Endpoint | Description |
 |---|---|---|
@@ -220,12 +224,12 @@ The React dashboard gives you a live view of API health and usage:
 
 ## Testing the Rate Limiter
 
-1. **Register** a new account — plan defaults to `FREE` (20 req/min)
-2. Open the **Dashboard** and refresh rapidly — watch the stats cards update
-3. After the 20th request, the API returns `429 Too Many Requests`
-4. The **Blocked** counter and chart increment in real time
-5. Navigate to **Profile** → change plan to `PREMIUM` (200/min) or `ADMIN` (unlimited)
-6. The new limit takes effect immediately — no restart required
+1. Login using the admin credentials configured in `server/.env` or `server/.env.example`
+2. Open the **Dashboard** and exercise the API gateway with real traffic
+3. The dashboard updates request counts, blocked events, and active user metrics in real time
+4. Admin users can change user plans from the profile or admin panel
+5. Rate limit behavior is enforced automatically by Redis and returns `429 Too Many Requests` when exceeded
+6. The new plan takes effect immediately — no restart required
 
 ---
 

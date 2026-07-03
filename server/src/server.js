@@ -4,6 +4,7 @@ const app = require('./app');
 const connectDB = require('./config/db');
 const redisClient = require('./config/redis');
 const { validateConfig, getConfigSummary, SERVER } = require('./config/constants');
+const { createAdminUserIfMissing } = require('./utils/bootstrapAdmin');
 
 const PORT = SERVER.PORT || 5000;
 
@@ -40,7 +41,10 @@ let serverInstance;
     await redisClient.connect();
     console.log('✅ Redis connected');
 
-    // 3. Start the server
+    // 3. Bootstrap the initial admin user when needed
+    await createAdminUserIfMissing();
+
+    // 4. Start the server
     serverInstance = app.listen(PORT, () => {
       console.log(`\n🚀 RateGuard server running on port ${PORT}`);
       console.log(`📍 Health check: http://localhost:${PORT}/health`);

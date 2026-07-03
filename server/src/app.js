@@ -9,7 +9,9 @@ dotenv.config();
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const adminRoutes = require('./routes/adminRoutes');
+const testerRoutes = require('./routes/apiTesterRoutes');
 const User = require('./models/User');
+const ipWhitelist = require('./middleware/ipWhitelist');
 
 // ✅ Import constants from centralized config
 const {
@@ -141,6 +143,7 @@ const adminAuthBypass = async (req, res, next) => {
 // ============ APPLY RATE LIMITERS ============
 app.use('/api/auth', adminAuthBypass);
 app.use('/api/admin', adminLimiter);
+app.use('/api/admin', ipWhitelist);
 
 const apiRateLimitFilter = (req, res, next) => {
   const path = req.path.toLowerCase();
@@ -155,6 +158,7 @@ app.use('/api', apiRateLimitFilter);
 // ============ ROUTES ============
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api', testerRoutes);
 app.use('/api', userRoutes);
 
 // ============ HEALTH CHECK ============

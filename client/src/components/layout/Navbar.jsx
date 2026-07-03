@@ -38,7 +38,13 @@ const Navbar = () => {
           >
             <i className="fas fa-chart-pie mr-1"></i> Dashboard
           </Link>
-          
+          <Link
+            to="/api-tester"
+            className="text-sm text-gray-300 hover:text-white transition flex items-center gap-1"
+          >
+            <i className="fas fa-flask mr-1"></i> API Tester
+          </Link>
+
           {/* ✅ NEW: Admin Link - Only visible to admin users */}
           {user.role === 'admin' && (
             <Link
@@ -50,7 +56,7 @@ const Navbar = () => {
               <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse"></span>
             </Link>
           )}
-          
+
           <Link
             to="/profile"
             className="text-sm text-gray-300 hover:text-white transition"
@@ -92,12 +98,6 @@ const Navbar = () => {
               className="px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 hover:bg-blue-700 transition text-white shadow-lg shadow-blue-600/20"
             >
               <i className="fas fa-sign-in-alt mr-2"></i>Login
-            </Link>
-            <Link
-              to="/register"
-              className="px-4 py-2 rounded-lg text-sm font-medium border border-white/20 hover:bg-white/10 transition"
-            >
-              <i className="fas fa-user-plus mr-2"></i>Register
             </Link>
           </>
         )}

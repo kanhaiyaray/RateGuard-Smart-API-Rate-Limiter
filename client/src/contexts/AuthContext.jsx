@@ -44,27 +44,11 @@ export const AuthProvider = ({ children }) => {
     };
 
     window.addEventListener('auth:unauthorized', handleUnauthorized);
-    
+
     return () => {
       window.removeEventListener('auth:unauthorized', handleUnauthorized);
     };
   }, [navigate]);
-
-  // ============ REGISTER ============
-  const register = async (name, email, password) => {
-    try {
-      console.log('📝 Registering user:', email);
-      const res = await api.post('/auth/register', { name, email, password });
-      // ✅ FIXED: Access data property from standardized response
-      const user = res.data.data;
-      console.log('✅ Registration successful:', user);
-      setUser(user);
-      return user;
-    } catch (err) {
-      console.error('❌ Registration failed:', err.response?.data || err.message);
-      throw err;
-    }
-  };
 
   // ============ LOGIN ============
   const login = async (email, password) => {
@@ -114,13 +98,12 @@ export const AuthProvider = ({ children }) => {
   }
 
   return (
-    <AuthContext.Provider value={{ 
-      user, 
-      loading, 
-      register, 
-      login, 
-      logout, 
-      updateUser 
+    <AuthContext.Provider value={{
+      user,
+      loading,
+      login,
+      logout,
+      updateUser
     }}>
       {children}
     </AuthContext.Provider>

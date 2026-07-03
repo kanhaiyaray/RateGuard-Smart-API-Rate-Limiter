@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
 const Login = () => {
@@ -23,8 +23,8 @@ const Login = () => {
   return (
     <div className="max-w-md mx-auto">
       <div className="glass rounded-2xl p-8 border border-white/5">
-        <h2 className="text-2xl font-bold text-white text-center">Welcome Back</h2>
-        <p className="text-gray-400 text-center text-sm mt-1">Sign in to your account</p>
+        <h2 className="text-2xl font-bold text-white text-center">Admin Login</h2>
+        <p className="text-gray-400 text-center text-sm mt-1">Sign in with your admin credentials to access the RateGuard dashboard</p>
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>
             <label className="text-sm text-gray-400">Email</label>
@@ -56,10 +56,7 @@ const Login = () => {
             <i className="fas fa-sign-in-alt mr-2"></i>Sign In
           </button>
           <p className="text-center text-sm text-gray-400">
-            Don't have an account?{' '}
-            <Link to="/register" className="text-blue-400 hover:underline">
-              Register
-            </Link>
+            This portal is for administrators only. Contact your system owner if you need access.
           </p>
         </form>
       </div>

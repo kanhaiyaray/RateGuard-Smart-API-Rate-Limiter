@@ -1,16 +1,27 @@
 const express = require('express');
 const { body, param, query } = require('express-validator');
 const auth = require('../middleware/auth');
+const adminOnly = require('../middleware/admin');
 const { validateRequest } = require('../middleware/validate');
 const {
   changePlan,
   getAllUsers,
   updateUserRole,
   deleteUser,
+  getAdminOverview,
+  getAuditLogs,
+  listApiKeys,
+  createApiKey,
+  deleteApiKey,
+  runLoadTest,
+  exportReport,
+  getTwoFactorStatus,
+  toggleTwoFactor,
 } = require('../controllers/adminController');
 const router = express.Router();
 
 router.use(auth);
+router.use(adminOnly);
 
 router.post(
   '/change-plan',
@@ -102,201 +113,16 @@ router.get('/users/:userId', async (req, res) => {
  * 
  * ✅ Comprehensive admin analytics dashboard data
  */
-router.get('/stats', async (req, res) => {
-  try {
-    // ✅ Only admins can access this
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        message: 'Forbidden: Admin access required'
-      });
-    }
+router.get('/stats', getAdminOverview);
 
-    const User = require('../models/User');
-    const Analytics = require('../models/Analytics');
-
-    // ============ USER STATISTICS ============
-    const totalUsers = await User.countDocuments();
-    const adminUsers = await User.countDocuments({ role: 'admin' });
-    const regularUsers = await User.countDocuments({ role: 'user' });
-
-    // Plan distribution
-    const freeUsers = await User.countDocuments({ plan: 'FREE' });
-    const premiumUsers = await User.countDocuments({ plan: 'PREMIUM' });
-    const adminPlanUsers = await User.countDocuments({ plan: 'ADMIN' });
-
-    // New users today
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-    const newUsersToday = await User.countDocuments({
-      createdAt: { $gte: startOfDay }
-    });
-
-    // ============ REQUEST STATISTICS ============
-    const start = new Date();
-    start.setHours(0, 0, 0, 0);
-
-    // Today's requests
-    const totalRequestsToday = await Analytics.countDocuments({
-      timestamp: { $gte: start }
-    });
-
-    const blockedRequestsToday = await Analytics.countDocuments({
-      timestamp: { $gte: start },
-      blocked: true
-    });
-
-    const allowedRequestsToday = totalRequestsToday - blockedRequestsToday;
-
-    // Total requests (all time)
-    const totalRequestsAllTime = await Analytics.countDocuments();
-    const blockedRequestsAllTime = await Analytics.countDocuments({
-      blocked: true
-    });
-
-    // ============ TOP ACTIVE ENDPOINTS ============
-    const topEndpoints = await Analytics.aggregate([
-      {
-        $match: {
-          timestamp: { $gte: start }
-        }
-      },
-      {
-        $group: {
-          _id: { path: '$endpoint', method: '$method' },
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { count: -1 } },
-      { $limit: 10 },
-      {
-        $project: {
-          path: '$_id.path',
-          method: '$_id.method',
-          count: 1,
-          _id: 0
-        }
-      },
-    ]);
-
-    // ============ TOP ACTIVE USERS ============
-    const topActiveUsers = await Analytics.aggregate([
-      {
-        $match: {
-          timestamp: { $gte: start }
-        }
-      },
-      {
-        $group: {
-          _id: '$userId',
-          count: { $sum: 1 }
-        }
-      },
-      { $sort: { count: -1 } },
-      { $limit: 10 },
-      {
-        $lookup: {
-          from: 'users',
-          localField: '_id',
-          foreignField: '_id',
-          as: 'user'
-        }
-      },
-      { $unwind: '$user' },
-      {
-        $project: {
-          name: '$user.name',
-          email: '$user.email',
-          plan: '$user.plan',
-          count: 1,
-          _id: 0
-        }
-      },
-    ]);
-
-    // ============ HOURLY REQUEST TREND ============
-    const hourlyTrend = await Analytics.aggregate([
-      {
-        $match: {
-          timestamp: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }
-        }
-      },
-      {
-        $group: {
-          _id: {
-            hour: { $hour: '$timestamp' },
-            blocked: '$blocked'
-          },
-          count: { $sum: 1 }
-        }
-      },
-      {
-        $project: {
-          hour: '$_id.hour',
-          blocked: '$_id.blocked',
-          count: 1,
-          _id: 0
-        }
-      },
-      { $sort: { hour: 1 } }
-    ]);
-
-    // Format hourly data for charts
-    const hours = Array.from({ length: 24 }, (_, i) => i);
-    const requestsPerHour = hours.map(hour => {
-      const found = hourlyTrend.filter(d => d.hour === hour && !d.blocked);
-      return found.reduce((sum, d) => sum + d.count, 0);
-    });
-    const blockedPerHour = hours.map(hour => {
-      const found = hourlyTrend.filter(d => d.hour === hour && d.blocked);
-      return found.reduce((sum, d) => sum + d.count, 0);
-    });
-
-    // ============ RESPONSE ============
-    res.json({
-      success: true,
-      stats: {
-        users: {
-          total: totalUsers,
-          admins: adminUsers,
-          regular: regularUsers,
-          free: freeUsers,
-          premium: premiumUsers,
-          adminPlan: adminPlanUsers,
-          newToday: newUsersToday
-        },
-        requests: {
-          today: {
-            total: totalRequestsToday,
-            blocked: blockedRequestsToday,
-            allowed: allowedRequestsToday,
-            blockRate: totalRequestsToday > 0
-              ? parseFloat((blockedRequestsToday / totalRequestsToday * 100).toFixed(2))
-              : 0
-          },
-          allTime: {
-            total: totalRequestsAllTime,
-            blocked: blockedRequestsAllTime,
-            allowed: totalRequestsAllTime - blockedRequestsAllTime
-          }
-        },
-        topEndpoints: topEndpoints,
-        topActiveUsers: topActiveUsers,
-        hourlyTrend: {
-          hours: hours,
-          requests: requestsPerHour,
-          blocked: blockedPerHour
-        }
-      }
-    });
-  } catch (err) {
-    console.error('❌ Error fetching admin stats:', err.message);
-    res.status(500).json({
-      success: false,
-      message: err.message
-    });
-  }
-});
+router.get('/audit-logs', getAuditLogs);
+router.get('/api-keys', listApiKeys);
+router.post('/api-keys', [body('appName').notEmpty().withMessage('appName is required')], validateRequest, createApiKey);
+router.delete('/api-keys/:keyId', [param('keyId').isMongoId().withMessage('Invalid key ID')], validateRequest, deleteApiKey);
+router.post('/load-test', [body('url').isURL().withMessage('Valid URL is required')], validateRequest, runLoadTest);
+router.get('/export-report', exportReport);
+router.get('/2fa/status', getTwoFactorStatus);
+router.post('/2fa/toggle', [body('enabled').isBoolean().withMessage('enabled must be boolean')], validateRequest, toggleTwoFactor);
 
 // ============ ADMIN ENDPOINT: GET SYSTEM HEALTH ============
 /**

@@ -4,19 +4,21 @@ const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  plan: { 
-    type: String, 
-    enum: ['FREE', 'PREMIUM', 'ADMIN'], 
-    default: 'FREE' 
+  plan: {
+    type: String,
+    enum: ['FREE', 'PREMIUM', 'ADMIN'],
+    default: 'FREE'
   },
-  role: { 
-    type: String, 
-    enum: ['user', 'admin'], 
-    default: 'user' 
+  role: {
+    type: String,
+    enum: ['user', 'admin'],
+    default: 'user'
   },
-  createdAt: { 
-    type: Date, 
-    default: Date.now 
+  twoFactorEnabled: { type: Boolean, default: false },
+  twoFactorSecret: { type: String, default: null },
+  createdAt: {
+    type: Date,
+    default: Date.now
   },
 });
 
