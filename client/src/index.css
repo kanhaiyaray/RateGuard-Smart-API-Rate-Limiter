@@ -1,14 +1,47 @@
+/* client/src/index.css - ADD THEME SUPPORT */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-body {
-  background: #0b1120;
-  color: #e5e7eb;
-  font-family: 'Inter', sans-serif;
+/* Base styles */
+:root {
+  --bg-primary: #0b1120;
+  --bg-secondary: #111827;
+  --bg-card: rgba(255, 255, 255, 0.05);
+  --border-color: rgba(255, 255, 255, 0.1);
+  --text-primary: #e5e7eb;
+  --text-secondary: #9ca3af;
+  --glass-bg: rgba(17, 24, 39, 0.8);
 }
 
-/* Toast animation – slide up from bottom */
+/* Light theme */
+.light {
+  --bg-primary: #f3f4f6;
+  --bg-secondary: #ffffff;
+  --bg-card: rgba(0, 0, 0, 0.03);
+  --border-color: rgba(0, 0, 0, 0.1);
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --glass-bg: rgba(255, 255, 255, 0.9);
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', sans-serif;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* Glass component with theme support */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-color);
+  transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+/* Toast animation */
 @keyframes slideUp {
   from {
     opacity: 0;
@@ -22,4 +55,37 @@ body {
 
 .animate-slide-up {
   animation: slideUp 0.3s ease-out forwards;
+}
+
+/* Card hover effect */
+.card-hover {
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+}
+
+.light .card-hover:hover {
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--text-secondary);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-primary);
 }

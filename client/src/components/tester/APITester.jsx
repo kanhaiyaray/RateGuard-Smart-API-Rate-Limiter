@@ -1,6 +1,7 @@
+// client/src/components/tester/APITester.jsx
 import React, { useState } from 'react';
 import { useToast } from '../../contexts/ToastContext';
-import api from '../../services/api';
+import { testApi } from '../../services/api'; // ✅ Import testApi instead of api
 import TestResults from './TestResults';
 import TestConfiguration from './TestConfiguration';
 import Spinner from '../common/Spinner';
@@ -22,9 +23,9 @@ const APITester = () => {
     method: 'GET',
     headers: {},
     body: '',
-    requestsPerMinute: 20,
-    duration: 30,
-    concurrent: 5,
+    requestsPerMinute: 10, // ✅ Reduced from 20
+    duration: 15, // ✅ Reduced from 30
+    concurrent: 3, // ✅ Reduced from 5
   });
   const [testing, setTesting] = useState(false);
   const [results, setResults] = useState(null);
@@ -93,7 +94,8 @@ const APITester = () => {
       const bodyPayload = parseJsonField(config.body);
       const headersPayload = parseJsonField(config.headers);
 
-      const response = await api.post('/tester/test', {
+      // ✅ Use testApi instead of api (120 second timeout)
+      const response = await testApi.post('/tester/test', {
         ...config,
         body: bodyPayload,
         headers: typeof headersPayload === 'string' ? {} : headersPayload,
@@ -104,7 +106,13 @@ const APITester = () => {
       showToast('✅ Test completed successfully!', 'success');
     } catch (err) {
       console.error('❌ Test failed:', err);
-      showToast(err.response?.data?.message || 'Test failed. Please try again.', 'error');
+      
+      // ✅ Better error message for timeout
+      if (err.code === 'ECONNABORTED' && err.message.includes('timeout')) {
+        showToast('⏱️ Test timed out. Try reducing requests/min or duration.', 'error');
+      } else {
+        showToast(err.response?.data?.message || 'Test failed. Please try again.', 'error');
+      }
     } finally {
       clearInterval(progressInterval);
       setTesting(false);

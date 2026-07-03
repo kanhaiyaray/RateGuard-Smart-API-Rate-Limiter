@@ -1,19 +1,32 @@
+// server/src/app.js (MODIFIED - Only include existing routes)
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
+const activityLogger = require('./middleware/activityLogger');
 dotenv.config();
 
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const testerRoutes = require('./routes/apiTesterRoutes');
+
+// ✅ NEW - Optional routes (if files exist)
+let alertRoutes, appRoutes, reportRoutes, twoFactorRoutes;
+try {
+  alertRoutes = require('./routes/alertRoutes');
+  appRoutes = require('./routes/appRoutes');
+  reportRoutes = require('./routes/reportRoutes');
+  twoFactorRoutes = require('./routes/twoFactorRoutes');
+} catch (err) {
+  console.warn('⚠️ Some routes not found, continuing without them:', err.message);
+}
+
 const User = require('./models/User');
 const ipWhitelist = require('./middleware/ipWhitelist');
 
-// ✅ Import constants from centralized config
 const {
   ALLOWED_ORIGINS,
   RATE_LIMIT: RATE_CONFIG,
@@ -39,18 +52,15 @@ app.use(helmet({
 }));
 
 // ============ CORS CONFIGURATION ============
-// ✅ Use ALLOWED_ORIGINS from constants instead of hardcoded array
 const corsOptions = {
   origin: function (origin, callback) {
     console.log('🔍 CORS Request from origin:', origin);
 
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) {
       console.log('✅ No origin, allowing');
       return callback(null, true);
     }
 
-    // Check if origin is allowed
     if (ALLOWED_ORIGINS.indexOf(origin) !== -1) {
       console.log('✅ CORS allowed for:', origin);
       callback(null, true);
@@ -59,7 +69,7 @@ const corsOptions = {
       callback(new Error('Not allowed by CORS'));
     }
   },
-  credentials: true, // ✅ IMPORTANT: Allow cookies
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-Requested-With'],
   exposedHeaders: ['Set-Cookie', 'X-RateLimit-Limit', 'X-RateLimit-Remaining', 'X-RateLimit-Reset'],
@@ -68,7 +78,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // ✅ Handle preflight requests
+app.options('*', cors(corsOptions));
 
 // ============ ADDITIONAL MIDDLEWARE ============
 app.use(cookieParser());
@@ -81,8 +91,10 @@ app.use((req, res, next) => {
   next();
 });
 
+// ============ ADD ACTIVITY LOGGER ============
+app.use(activityLogger);
+
 // ============ GLOBAL RATE LIMITERS ============
-// ✅ Use constants for rate limit values
 const authLimiter = rateLimit({
   windowMs: RATE_CONFIG.AUTH_WINDOW_MS,
   max: RATE_CONFIG.AUTH_MAX_ATTEMPTS,
@@ -121,7 +133,6 @@ const adminLimiter = rateLimit({
 const adminAuthBypass = async (req, res, next) => {
   const path = req.path.toLowerCase();
 
-  // Bypass auth attempt rate limiting for admin login route only
   if (path === '/login' && req.method === 'POST') {
     const email = req.body?.email;
     if (email) {
@@ -161,6 +172,12 @@ app.use('/api/admin', adminRoutes);
 app.use('/api', testerRoutes);
 app.use('/api', userRoutes);
 
+// ✅ NEW - Only use routes if they were successfully loaded
+if (alertRoutes) app.use('/api/alerts', alertRoutes);
+if (appRoutes) app.use('/api/apps', appRoutes);
+if (reportRoutes) app.use('/api/reports', reportRoutes);
+if (twoFactorRoutes) app.use('/api/2fa', twoFactorRoutes);
+
 // ============ HEALTH CHECK ============
 app.get('/health', async (req, res) => {
   const health = {
@@ -184,17 +201,14 @@ app.get('/health', async (req, res) => {
     const mongoose = require('mongoose');
     const redisClient = require('./config/redis');
 
-    // Check MongoDB connection
     health.services.mongodb = mongoose.connection.readyState === 1
       ? 'connected'
       : 'disconnected';
 
-    // Check Redis connection
     health.services.redis = redisClient.isReady
       ? 'connected'
       : 'disconnected';
 
-    // Overall status
     if (health.services.mongodb === 'disconnected' || health.services.redis === 'disconnected') {
       health.status = 'DEGRADED';
     }
@@ -221,7 +235,6 @@ app.use((err, req, res, next) => {
   console.error('❌ Error:', err.message);
   console.error('Stack:', err.stack);
 
-  // Handle CORS errors
   if (err.message === 'Not allowed by CORS') {
     return res.status(403).json({
       success: false,
@@ -229,7 +242,6 @@ app.use((err, req, res, next) => {
     });
   }
 
-  // Handle validation errors
   if (err.name === 'ValidationError') {
     return res.status(400).json({
       success: false,
@@ -238,7 +250,6 @@ app.use((err, req, res, next) => {
     });
   }
 
-  // Handle duplicate key errors
   if (err.code === 11000) {
     const field = Object.keys(err.keyPattern)[0];
     return res.status(409).json({
@@ -248,7 +259,6 @@ app.use((err, req, res, next) => {
     });
   }
 
-  // Handle JWT errors
   if (err.name === 'JsonWebTokenError') {
     return res.status(401).json({
       success: false,
@@ -263,7 +273,6 @@ app.use((err, req, res, next) => {
     });
   }
 
-  // Default server error
   const statusCode = err.statusCode || 500;
   const message = err.message || API.SERVER_ERROR_MESSAGE || 'Internal Server Error';
 
@@ -274,5 +283,4 @@ app.use((err, req, res, next) => {
   });
 });
 
-// ============ EXPORT APP ============
 module.exports = app;

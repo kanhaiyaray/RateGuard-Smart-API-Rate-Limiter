@@ -1,3 +1,4 @@
+// server/src/routes/apiTesterRoutes.js
 const express = require('express');
 const axios = require('axios');
 const auth = require('../middleware/auth');
@@ -25,6 +26,7 @@ const buildRequestConfig = ({ url, method, headers, body }) => ({
   },
   ...(body ? { data: body } : {}),
   validateStatus: () => true,
+  timeout: 60000, // ✅ Add 60 second timeout for external requests
 });
 
 router.post(
@@ -47,10 +49,18 @@ router.post(
         method = 'GET',
         headers = {},
         body: requestBody = null,
-        requestsPerMinute = 20,
-        duration = 30,
-        concurrent = 5,
+        requestsPerMinute = 10, // ✅ Reduced from 20
+        duration = 15, // ✅ Reduced from 30
+        concurrent = 3, // ✅ Reduced from 5
       } = req.body;
+
+      // ✅ Add validation to prevent excessive load
+      if (requestsPerMinute * duration > 500) {
+        return res.status(400).json({
+          success: false,
+          message: 'Too many total requests. Please reduce requests/min or duration.'
+        });
+      }
 
       const intervalMs = Math.max(1, Math.floor(60000 / requestsPerMinute));
       const startTime = Date.now();

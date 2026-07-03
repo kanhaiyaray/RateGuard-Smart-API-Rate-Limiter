@@ -29,6 +29,7 @@ console.log(`   Features: ${JSON.stringify(summary.features)}`);
 console.log('');
 
 let serverInstance;
+let wsService;
 
 // ============ START SERVER WITH PROPER CONNECTION ORDER ============
 (async () => {
@@ -51,20 +52,76 @@ let serverInstance;
       console.log(`📍 API: http://localhost:${PORT}/api`);
       console.log('\n✅ Server is ready!');
 
+      // ============ ✅ Initialize WebSocket service (if available) ============
+      try {
+        const WebSocketService = require('./services/websocket');
+        wsService = new WebSocketService(serverInstance);
+        console.log(`📍 WebSocket: ws://localhost:${PORT}/ws`);
+        console.log('✅ WebSocket service initialized');
+        // Expose for use in controllers and middleware
+        global.wsService = wsService;
+      } catch (err) {
+        console.warn('⚠️ WebSocket service not available:', err.message);
+        global.wsService = null;
+      }
+
+      // ============ START ALERT SERVICE (if available) ============
+      try {
+        const AlertService = require('./services/alertService');
+        const alertService = new AlertService();
+        alertService.start(30000); // Check every 30 seconds
+        global.alertService = alertService;
+        console.log('✅ Alert service started');
+      } catch (err) {
+        console.warn('⚠️ Alert service not available:', err.message);
+        global.alertService = null;
+      }
+
+      // ============ WARM PREDICTIVE ANALYTICS CACHE (if available) ============
+      try {
+        const PredictiveAnalytics = require('./services/predictiveAnalytics');
+        // Pre-warm cache after 5 seconds
+        setTimeout(async () => {
+          try {
+            await PredictiveAnalytics.predictUsage('all', 7);
+            console.log('✅ Predictive analytics cache warmed');
+          } catch (err) {
+            // Silent fail - will warm on first request
+          }
+        }, 5000);
+      } catch (err) {
+        console.warn('⚠️ Predictive analytics not available:', err.message);
+      }
+
       if (process.env.NODE_ENV === 'development') {
         console.log('\n💡 Development Tips:');
         console.log('   - Press "rs" and Enter to restart the server');
         console.log('   - Changes to src/ will auto-reload');
         console.log(`   - Frontend URL: ${summary.frontendUrl}`);
         console.log(`   - Debug Mode: ${summary.features.ENABLE_DEBUG ? 'Enabled' : 'Disabled'}`);
+        if (wsService) {
+          console.log(`   - WebSocket Status: http://localhost:${PORT}/ws-status`);
+        }
       }
 
-      // Show rate limit information on startup
       console.log('\n📈 Rate Limit Configuration:');
       console.log(`   FREE Plan: ${summary.planLimits.FREE} requests/min`);
       console.log(`   PREMIUM Plan: ${summary.planLimits.PREMIUM} requests/min`);
       console.log(`   ADMIN Plan: ${summary.planLimits.ADMIN}`);
       console.log(`   Window: ${summary.rateLimit.windowSeconds} seconds`);
+
+      // Show WebSocket status if available
+      if (wsService) {
+        try {
+          const status = wsService.getStatus();
+          console.log('\n🔌 WebSocket Status:');
+          console.log(`   Path: /ws`);
+          console.log(`   Active Connections: ${status.activeConnections}`);
+          console.log(`   Active Users: ${status.activeUsers}`);
+        } catch (err) {
+          // Ignore status errors
+        }
+      }
     });
   } catch (error) {
     console.error('❌ Startup error:', error.message);
@@ -73,6 +130,7 @@ let serverInstance;
   }
 })();
 
+// ============ CLOSE SERVER HELPER ============
 const closeServer = () => {
   return new Promise((resolve, reject) => {
     if (!serverInstance) {
@@ -95,12 +153,37 @@ const closeServer = () => {
 const shutdown = async (signal) => {
   console.log(`\n🛑 Received ${signal} signal, shutting down gracefully...`);
 
+  // Close WebSocket connections first
+  if (wsService) {
+    try {
+      // Close all WebSocket connections
+      wsService.wss?.clients?.forEach((client) => {
+        client.close(1000, 'Server shutting down');
+      });
+      console.log('✅ WebSocket connections closed');
+    } catch (err) {
+      console.error('❌ Error closing WebSocket connections:', err.message);
+    }
+  }
+
+  // Stop alert service
+  if (global.alertService) {
+    try {
+      global.alertService.stop();
+      console.log('✅ Alert service stopped');
+    } catch (err) {
+      console.error('❌ Error stopping alert service:', err.message);
+    }
+  }
+
+  // Close HTTP server
   try {
     await closeServer();
   } catch (err) {
     console.error('❌ Error closing HTTP server:', err.message);
   }
 
+  // Close Redis connection
   try {
     await redisClient.quit();
     console.log('✅ Redis connection closed');
@@ -108,6 +191,7 @@ const shutdown = async (signal) => {
     console.error('❌ Error closing Redis connection:', err.message);
   }
 
+  // Close MongoDB connection
   try {
     const mongoose = require('mongoose');
     await mongoose.connection.close();
@@ -119,6 +203,8 @@ const shutdown = async (signal) => {
   console.log('👋 Goodbye!');
   process.exit(0);
 };
+
+// ============ PROCESS EVENT HANDLERS ============
 
 // Handle termination signals
 process.on('SIGTERM', () => shutdown('SIGTERM'));
@@ -137,3 +223,6 @@ process.on('unhandledRejection', async (reason, promise) => {
   console.error('Reason:', reason);
   await shutdown('unhandledRejection');
 });
+
+// ============ EXPORT FOR TESTING ============
+module.exports = { serverInstance, wsService };
